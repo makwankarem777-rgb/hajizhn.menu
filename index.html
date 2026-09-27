@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>حاجی ژن | Haji Zhn Cafe</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        let savedTheme = JSON.parse(localStorage.getItem('haji_zhn_theme')) || { dark: '#1e1b18', text: '#f3f4f6', accent: '#d97706' };
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cafe: {
+                            dark: savedTheme.dark,
+                            card: '#292522',
+                            accent: savedTheme.accent,
+                            gold: savedTheme.accent
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome بۆ ئایکۆنەکان -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; touch-action: manipulation; color: var(--text-color, #f3f4f6); }
+    </style>
+</head>
+<body id="page-body" class="bg-cafe-dark min-h-screen flex flex-col justify-between pb-24" style="color: var(--text-color, #f3f4f6);">
+
+    <!-- سەرپەڕەی سەرەکی -->
+    <header class="bg-cafe-card shadow-md sticky top-0 z-40 border-b border-gray-800">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <img id="nav-logo" src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100&h=100&fit=crop" alt="Logo" class="w-10 h-10 rounded-full object-cover border border-cafe-accent">
+                <div>
+                    <h1 id="nav-title" class="text-base font-bold text-cafe-gold">حاجی ژن</h1>
+                    <p id="nav-subtitle" class="text-[10px] text-gray-400">کافێ و ڕێستۆرانت</p>
+                </div>
+            </div>
+            
+            <!-- زمانەکانی سەرەوە -->
+            <div class="flex items-center bg-gray-900/80 p-1 rounded-full border border-gray-800 space-x-1 space-x-reverse">
+                <button onclick="changeLanguage('ckb')" id="lang-ckb" class="px-3 py-1 text-xs rounded-full font-medium transition bg-cafe-accent text-white">کوردی</button>
+                <button onclick="changeLanguage('en')" id="lang-en" class="px-3 py-1 text-xs rounded-full font-medium transition text-gray-400 hover:text-white">EN</button>
+                <button onclick="changeLanguage('ar')" id="lang-ar" class="px-3 py-1 text-xs rounded-full font-medium transition text-gray-400 hover:text-white">عربي</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ناوەڕۆکی سەرەکی مینیۆ -->
+    <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full">
+        <!-- بەشی ڕوونکردنەوەی سەرەوە -->
+        <div id="hero-banner" class="bg-cafe-card border border-gray-800 rounded-2xl p-4 mb-6 text-center shadow-md">
+            <h2 id="banner-title" class="text-cafe-gold font-bold text-sm mb-1"><i class="fa-solid fa-mug-hot ml-1"></i> بەخێربین بۆ مینیۆی فەرمی</h2>
+            <h3 id="banner-main-title" class="text-lg font-extrabold mb-1">حاجی ژن</h3>
+            <p id="banner-desc" class="text-xs text-gray-400">لە مینیۆکەمانەوە باشترین خواردن و خواردنەوەکان هەڵبژێرە</p>
+            <p id="cafe-hours-txt" class="text-[11px] text-cafe-gold mt-2 font-medium"><i class="fa-regular fa-clock ml-1"></i> کاتی کردنەوە: 08:00 AM - 12:00 PM</p>
+        </div>
+
+        <!-- خانەی گەڕان -->
+        <div class="mb-6">
+            <div class="relative">
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="search-input" oninput="filterSearch(this.value)" placeholder="گەڕان لە خواردن و خواردنەوەکان..." class="w-full bg-cafe-card border border-gray-800 rounded-xl pr-10 pl-4 py-2.5 text-sm focus:outline-none focus:border-cafe-accent shadow-inner">
+            </div>
+        </div>
+
+        <!-- بەشەکانی مینیۆ (Categories) -->
+        <div class="flex space-x-2 space-x-reverse overflow-x-auto pb-4 mb-6 scrollbar-none">
+            <button onclick="filterCategory('all')" class="cat-btn active bg-cafe-accent text-white px-4 py-2 rounded-full text-sm whitespace-nowrap transition" data-cat="all" id="btn-all">هەمووی</button>
+            <button onclick="filterCategory('food')" class="cat-btn bg-cafe-card text-gray-300 px-4 py-2 rounded-full text-sm whitespace-nowrap hover:bg-gray-800 transition" data-cat="food" id="btn-food">خواردن</button>
+            <button onclick="filterCategory('cold')" class="cat-btn bg-cafe-card text-gray-300 px-4 py-2 rounded-full text-sm whitespace-nowrap hover:bg-gray-800 transition" data-cat="cold" id="btn-cold">خواردنەوەی سارد</button>
+            <button onclick="filterCategory('hot')" class="cat-btn bg-cafe-card text-gray-300 px-4 py-2 rounded-full text-sm whitespace-nowrap hover:bg-gray-800 transition" data-cat="hot" id="btn-hot">خواردنەوەی گەرم</button>
+            <button onclick="filterCategory('dessert')" class="cat-btn bg-cafe-card text-gray-300 px-4 py-2 rounded-full text-sm whitespace-nowrap hover:bg-gray-800 transition" data-cat="dessert" id="btn-dessert">شیرینی</button>
+        </div>
+
+        <!-- لیستی ئایتمەکان -->
+        <div id="menu-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- ئایتمەکان لە داتابەیسەوە دێن -->
+        </div>
+    </main>
+
+    <!-- سەبەتەی خوارەوە -->
+    <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-cafe-card/95 backdrop-blur border-t border-gray-800 p-3 z-30 hidden shadow-2xl transition-all">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-cafe-accent text-white w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow" id="cart-count">0</div>
+                <div>
+                    <h4 class="text-xs font-bold" id="cart-title-txt">سەبەتەی داواکاری</h4>
+                    <p class="text-[11px] text-cafe-gold font-semibold" id="cart-total-price">0 IQD</p>
+                </div>
+            </div>
+            <button onclick="openCartModal()" class="bg-cafe-accent hover:bg-amber-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-lg flex items-center space-x-1 space-x-reverse">
+                <i class="fa-solid fa-bag-shopping ml-1"></i> <span id="view-cart-txt">پیشاندانی سەبەتە و ناردن</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- پەنجەرەی سەبەتە و ناردن بۆ واتسئەپ -->
+    <div id="cart-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex justify-center items-center p-4">
+        <div class="bg-cafe-card w-full max-w-lg p-6 rounded-2xl border border-gray-700 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="toggleCartModal(false)" class="absolute top-4 left-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h2 class="text-base font-bold text-cafe-gold mb-4 text-center" id="modal-cart-title">داواکارییەکانی سەبەتە</h2>
+            
+            <div id="cart-items-list" class="space-y-3 mb-4 max-h-48 overflow-y-auto pr-1"></div>
+
+            <div class="space-y-3 mb-5 bg-gray-900/50 p-3 rounded-xl border border-gray-800">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" id="lbl-table">ژمارەی مێز (Table Number)</label>
+                    <input type="text" id="order-table" placeholder="بۆ نموونە: مێزی ژمارە ٥" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cafe-accent">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" id="lbl-notes">تێبینی یان داواکاری تایبەت</label>
+                    <textarea id="order-notes" placeholder="بۆ نموونە: قاوەکە کەم شەکربێت..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cafe-accent h-16 resize-none"></textarea>
+                </div>
+            </div>
+
+            <button onclick="sendOrderToWhatsApp()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-bold transition shadow-lg flex items-center justify-center space-x-2 space-x-reverse">
+                <i class="fa-brands fa-whatsapp text-lg"></i> <span id="send-whatsapp-txt">ناردنی داواکاری بۆ واتسئەپی کافێ</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- فووتەر -->
+    <footer class="bg-cafe-card border-t border-gray-800 py-6 mt-10">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <div id="social-icons" class="flex justify-center space-x-6 space-x-reverse mb-4 text-xl"></div>
+            <div class="flex justify-center items-center space-x-1.5 space-x-reverse mt-1">
+                <p id="footer-creator" class="text-[10px] text-gray-500">دروستکراوە لەلایەن Makwan K. Ahmad</p>
+                <button onclick="toggleAdminModal(true)" class="text-gray-600 hover:text-cafe-accent text-[10px] p-0.5 rounded transition" title="سێتینگ">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- پەنچەرەی چوونەژوورەوەی ئەدمن -->
+    <div id="admin-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex justify-center items-center p-4">
+        <div class="bg-cafe-card w-full max-w-md p-6 rounded-2xl border border-gray-700 shadow-2xl relative">
+            <button onclick="toggleAdminModal(false)" class="absolute top-4 left-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-lock text-cafe-gold text-2xl mb-2"></i>
+                <h2 class="text-lg font-bold text-cafe-gold" id="admin-modal-title">چوونەژوورەوەی بەڕێوەبەر</h2>
+                <p class="text-[11px] text-gray-400 mt-1" id="admin-modal-sub">بۆ دەستکاریکردنی مینیۆ و تێکست و نرخەکان</p>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" id="lbl-username">ناوی بەکارهێنەر (Username)</label>
+                    <input type="text" id="admin-user" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cafe-accent" required>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" id="lbl-password">وشەی نهێنی (Password)</label>
+                    <input type="password" id="admin-pass" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cafe-accent" required>
+                </div>
+                <button type="submit" id="btn-login-submit" class="w-full bg-cafe-accent hover:bg-amber-600 text-white py-2 rounded-lg text-sm font-medium transition">چوونە ژوورەوە</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- داشبۆردی بەڕێوەبردن -->
+    <div id="admin-dashboard" class="fixed inset-0 bg-cafe-dark hidden z-50 overflow-y-auto p-4">
+        <div class="max-w-2xl mx-auto bg-cafe-card p-6 rounded-2xl border border-gray-700 shadow-2xl my-8">
+            <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                <h2 class="text-xl font-bold text-cafe-gold">داشبۆردی بەڕێوەبردن (هەوری)</h2>
+                <button onclick="closeDashboard()" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg text-xs transition">دەرچوون</button>
+            </div>
+
+            <!-- زیادکردنی ئایتم و سڕینەوە بۆ لای هەمووان -->
+            <div class="mb-6 bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                <h3 class="text-sm font-bold text-gray-300 mb-3">زیادکردنی خواردن یان خواردنەوەی نوێ بۆ لای هەموو کڕیارەکان</h3>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="text" id="new-name-ckb" placeholder="ناو بە کوردی" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                        <input type="text" id="new-name-ar" placeholder="الاسم بالعربية" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                        <input type="text" id="new-name-en" placeholder="Name in English" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select id="new-category" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                            <option value="food">خواردن</option>
+                            <option value="cold">خواردنەوەی سارد</option>
+                            <option value="hot">خواردنەوەی گەرم</option>
+                            <option value="dessert">شیرینی</option>
+                        </select>
+                        <input type="text" id="new-price" placeholder="نرخ (بۆ نموونە: 5,000 IQD)" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">وێنەی ئایتم:</label>
+                        <input type="file" id="new-img-file" accept="image/*" class="w-full text-xs text-gray-400 file:ml-4 file:py-2 file:px-4 file:rounded-lg file:bg-cafe-accent file:text-white">
+                    </div>
+                    <button onclick="addNewItemCloud()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium transition">زیادکردن و بڵاوکردنەوە بۆ هەمووان</button>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-bold text-gray-300 mb-3">ئایتمەکانی ئێستا لە سێرڤەردا</h3>
+                <div id="admin-items-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript & Supabase Setup -->
+    <script>
+        // زانیارییە ڕاستەقینەکانی Supabaseـەکەت لێرە جێگیرکراون
+        const SUPABASE_URL = 'https://inxbszbhdlmvmggbxtaj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlueGJzemJoZGxtdm1nZ2J4dGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzM5MjgsImV4cCI6MjA1NzgwOTkyOH0.placeholder_key'; 
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let siteData = {
+            adminUser: "admin",
+            adminPass: "1234",
+            cafeName: { ckb: "حاجی ژن", ar: "حاجي ژن", en: "Haji Zhn" },
+            cafeSubtitle: { ckb: "کافێ و ڕێستۆرانت", ar: "مقهى ومطعم", en: "Cafe & Restaurant" },
+            bannerTag: { ckb: "بەخێربین بۆ مینیۆی فەرمی", ar: "مرحباً بكم في القائمة الرسمية", en: "Welcome to Official Menu" },
+            bannerDesc: { ckb: "لە مینیۆکەمانەوە باشترین خواردن و خواردنەوەکان هەڵبژێرە", ar: "اختر أفضل الأطعمة والمشروبات من قائمتنا", en: "Choose the best food and drinks from our menu" },
+            cafeHours: "08:00 AM - 12:00 PM",
+            searchPlaceholder: { ckb: "گەڕان لە خواردن و خواردنەوەکان...", ar: "البحث في الأطعمة والمشروبات...", en: "Search food and drinks..." },
+            creators: { ckb: "دروستکراوە لەلایەن Makwan K. Ahmad", ar: "تم الإنشاء بواسطة Makwan K. Ahmad", en: "Created by Makwan K. Ahmad" },
+            adminModalTexts: {
+                ckb: { title: "چوونەژوورەوەی بەڕێوەبەر", sub: "بۆ دەستکاریکردنی مینیۆ", user: "ناوی بەکارهێنەر (Username)", pass: "وشەی نهێنی (Password)", btn: "چوونە ژوورەوە" },
+                ar: { title: "تسجيل دخول المشرف", sub: "لتعديل القائمة", user: "اسم المستخدم (Username)", pass: "كلمة المرور (Password)", btn: "تسجيل الدخول" },
+                en: { title: "Admin Login", sub: "For editing menu", user: "Username", pass: "Password", btn: "Login" }
+            },
+            cartTitles: {
+                ckb: { cartTitle: "سەبەتەی داواکاری", viewCart: "پیشاندانی سەبەتە و ناردن", sendWhatsApp: "ناردنی داواکاری بۆ واتسئەپی کافێ", emptyCart: "سەبەتەکەت بەتاڵە.", modalTitle: "داواکارییەکانی سەبەتە", tableLabel: "ژمارەی مێز (Table Number)", notesLabel: "تێبینی یان داواکاری تایبەت", addCart: "زیادکردن بۆ سەبەتە" },
+                ar: { cartTitle: "سلة الطلبات", viewCart: "عرض السلة والإرسال", sendWhatsApp: "إرسال الطلب إلى واتساب المقهى", emptyCart: "سلتك فارغة.", modalTitle: "محتويات السلة", tableLabel: "رقم الطاولة (Table Number)", notesLabel: "ملاحظات أو طلب خاص", addCart: "أضف إلى السلة" },
+                en: { cartTitle: "Order Cart", viewCart: "View Cart & Send", sendWhatsApp: "Send Order to Cafe WhatsApp", emptyCart: "Your cart is empty.", modalTitle: "Cart Items", tableLabel: "Table Number", notesLabel: "Special Notes or Requests", addCart: "Add to Cart" }
+            },
+            socials: { whatsapp: "9647500000000", instagram: "https://instagram.com", tiktok: "https://tiktok.com" },
+            logo: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100&h=100&fit=crop",
+            items: []
+        };
+
+        let currentLang = 'ckb';
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let cart = [];
+        let tempItemBase64 = '';
+
+        async function fetchItemsFromCloud() {
+            try {
+                const { data, error } = await _supabase.from('menu_items').select('*');
+                if (data) {
+                    siteData.items = data.map(item => ({
+                        ...item,
+                        name: typeof item.name === 'string' ? JSON.parse(item.name) : item.name
+                    }));
+                }
+                renderMenu();
+            } catch (err) {
+                console.error('Error fetching items:', err);
+                renderMenu();
+            }
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            const htmlTag = document.documentElement;
+            htmlTag.lang = lang;
+            htmlTag.dir = (lang === 'en') ? 'ltr' : 'rtl';
+            
+            ['ckb', 'en', 'ar'].forEach(l => {
+                const btn = document.getElementById(`lang-${l}`);
+                if(l === lang) {
+                    btn.className = "px-3 py-1 text-xs rounded-full font-medium transition bg-cafe-accent text-white";
+                } else {
+                    btn.className = "px-3 py-1 text-xs rounded-full font-medium transition text-gray-400 hover:text-white";
+                }
+            });
+
+            document.getElementById('btn-all').innerText = (lang === 'en') ? 'All' : (lang === 'ar' ? 'الكل' : 'هەمووی');
+            document.getElementById('btn-food').innerText = (lang === 'en') ? 'Food' : (lang === 'ar' ? 'طعام' : 'خواردن');
+            document.getElementById('btn-cold').innerText = (lang === 'en') ? 'Cold Drinks' : (lang === 'ar' ? 'مشروبات باردة' : 'خواردنەوەی سارد');
+            document.getElementById('btn-hot').innerText = (lang === 'en') ? 'Hot Drinks' : (lang === 'ar' ? 'مشروبات ساخنة' : 'خواردنەوەی گەرم');
+            document.getElementById('btn-dessert').innerText = (lang === 'en') ? 'Desserts' : (lang === 'ar' ? 'حلويات' : 'شیرینی');
+            
+            document.getElementById('cart-title-txt').innerText = siteData.cartTitles[lang].cartTitle;
+            document.getElementById('view-cart-txt').innerText = siteData.cartTitles[lang].viewCart;
+            document.getElementById('modal-cart-title').innerText = siteData.cartTitles[lang].modalTitle;
+            document.getElementById('lbl-table').innerText = siteData.cartTitles[lang].tableLabel;
+            document.getElementById('lbl-notes').innerText = siteData.cartTitles[lang].notesLabel;
+            document.getElementById('send-whatsapp-txt').innerText = siteData.cartTitles[lang].sendWhatsApp;
+            document.getElementById('footer-creator').innerText = siteData.creators[lang] || siteData.creators.ckb;
+
+            document.getElementById('admin-modal-title').innerText = siteData.adminModalTexts[lang].title;
+            document.getElementById('admin-modal-sub').innerText = siteData.adminModalTexts[lang].sub;
+            document.getElementById('lbl-username').innerText = siteData.adminModalTexts[lang].user;
+            document.getElementById('lbl-password').innerText = siteData.adminModalTexts[lang].pass;
+            document.getElementById('btn-login-submit').innerText = siteData.adminModalTexts[lang].btn;
+            
+            renderMenu();
+            renderCartModalList();
+        }
+
+        function renderMenu() {
+            document.getElementById('nav-title').innerText = siteData.cafeName[currentLang] || siteData.cafeName.ckb;
+            document.getElementById('nav-subtitle').innerText = siteData.cafeSubtitle[currentLang] || siteData.cafeSubtitle.ckb;
+            document.getElementById('banner-title').innerHTML = `<i class="fa-solid fa-mug-hot ml-1"></i> ${siteData.bannerTag[currentLang] || siteData.bannerTag.ckb}`;
+            document.getElementById('banner-main-title').innerText = siteData.cafeName[currentLang] || siteData.cafeName.ckb;
+            document.getElementById('banner-desc').innerText = siteData.bannerDesc[currentLang] || siteData.bannerDesc.ckb;
+            document.getElementById('cafe-hours-txt').innerHTML = `<i class="fa-regular fa-clock ml-1"></i> ${siteData.cafeHours}`;
+            document.getElementById('search-input').placeholder = siteData.searchPlaceholder[currentLang] || siteData.searchPlaceholder.ckb;
+            document.getElementById('footer-creator').innerText = siteData.creators[currentLang] || siteData.creators.ckb;
+            document.getElementById('nav-logo').src = siteData.logo;
+
+            const container = document.getElementById('menu-container');
+            container.innerHTML = '';
+
+            let filteredItems = currentFilter === 'all' ? siteData.items : siteData.items.filter(i => i.category === currentFilter);
+
+            if(searchQuery) {
+                filteredItems = filteredItems.filter(i => {
+                    let n = i.name;
+                    return (n.ckb && n.ckb.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (n.ar && n.ar.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (n.en && n.en.toLowerCase().includes(searchQuery.toLowerCase()));
+                });
+            }
+
+            if(filteredItems.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">هیچ ئایتمێک نەدۆزرایەوە.</p>`;
+                return;
+            }
+
+            filteredItems.forEach(item => {
+                let nameObj = item.name;
+                const displayName = nameObj[currentLang] || nameObj['ckb'] || '';
+                container.innerHTML += `
+                    <div class="bg-cafe-card rounded-2xl p-3 border border-gray-800 flex items-center space-x-3 space-x-reverse shadow-md">
+                        <img src="${item.img}" class="w-20 h-20 rounded-xl object-cover border border-gray-700">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-sm sm:text-base">${displayName}</h3>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="text-cafe-gold font-semibold text-sm">${item.price}</span>
+                                <button onclick="addToCart(${item.id})" class="bg-cafe-accent/20 hover:bg-cafe-accent text-cafe-accent hover:text-white px-2.5 py-1 rounded-lg text-xs font-bold transition border border-cafe-accent/30">
+                                    <i class="fa-solid fa-plus ml-1"></i> ${siteData.cartTitles[currentLang].addCart}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function addToCart(itemId) {
+            const item = siteData.items.find(i => i.id === itemId);
+            if(!item) return;
+            const existing = cart.find(c => c.id === itemId);
+            if(existing) { existing.qty++; } else { cart.push({ id: item.id, name: item.name, price: item.price, qty: 1 }); }
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+            const cartBar = document.getElementById('cart-bar');
+            if(totalCount > 0) {
+                cartBar.classList.remove('hidden');
+                document.getElementById('cart-count').innerText = totalCount;
+                let totalPriceNum = cart.reduce((sum, item) => {
+                    let num = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+                    return sum + (num * item.qty);
+                }, 0);
+                document.getElementById('cart-total-price').innerText = totalPriceNum.toLocaleString() + " IQD";
+            } else {
+                cartBar.classList.add('hidden');
+            }
+        }
+
+        function openCartModal() { document.getElementById('cart-modal').classList.remove('hidden'); renderCartModalList(); }
+        function toggleCartModal(show) { if(show) document.getElementById('cart-modal').classList.remove('hidden'); else document.getElementById('cart-modal').classList.add('hidden'); }
+
+        function renderCartModalList() {
+            const listContainer = document.getElementById('cart-items-list');
+            listContainer.innerHTML = '';
+            if(cart.length === 0) {
+                listContainer.innerHTML = `<p class="text-center text-gray-400 text-xs py-4">${siteData.cartTitles[currentLang].emptyCart}</p>`;
+                return;
+            }
+            cart.forEach(cartItem => {
+                const itemName = cartItem.name[currentLang] || cartItem.name['ckb'];
+                listContainer.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+                        <div>
+                            <h4 class="text-xs font-bold">${itemName}</h4>
+                            <span class="text-[11px] text-cafe-gold">${cartItem.price}</span>
+                        </div>
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <button onclick="changeQty(${cartItem.id}, -1)" class="bg-gray-800 px-2 py-0.5 rounded text-xs">-</button>
+                            <span class="text-xs font-bold">${cartItem.qty}</span>
+                            <button onclick="changeQty(${cartItem.id}, 1)" class="bg-gray-800 px-2 py-0.5 rounded text-xs">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function changeQty(id, delta) {
+            const item = cart.find(c => c.id === id);
+            if(item) {
+                item.qty += delta;
+                if(item.qty <= 0) { cart = cart.filter(c => c.id !== id); }
+            }
+            updateCartUI();
+            renderCartModalList();
+        }
+
+        function sendOrderToWhatsApp() {
+            if(cart.length === 0) { alert('سەبەتەکەت بەتاڵە!'); return; }
+            const tableNum = document.getElementById('order-table').value;
+            const notes = document.getElementById('order-notes').value;
+            const whatsappNum = siteData.socials.whatsapp;
+            if(!whatsappNum) { alert('ژمارەی واتسئەپ لە ئەدمن دیاری نەکراوە!'); return; }
+
+            let message = `🛒 *داواکاری نوێ لە مینیۆی کافێ*\n\n`;
+            if(tableNum) message += `🪑 *${tableNum}*\n`;
+            if(notes) message += `📝 *تێبینی:* ${notes}\n\n`;
+            message += `📋 *ئایتمەکان:*\n`;
+
+            cart.forEach((c, index) => {
+                const itemName = c.name[currentLang] || c.name['ckb'];
+                message += `${index + 1}. ${itemName} (بڕ: ${c.qty}) - نرخی دانە: ${c.price}\n`;
+            });
+
+            let totalPriceNum = cart.reduce((sum, item) => {
+                let num = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+                return sum + (num * item.qty);
+            }, 0);
+            message += `\n💰 *کۆی گشتی نرخ:* ${totalPriceNum.toLocaleString()} IQD`;
+
+            window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+
+        function filterCategory(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if(btn.dataset.cat === cat) {
+                    btn.classList.add('bg-cafe-accent', 'text-white');
+                    btn.classList.remove('bg-cafe-card', 'text-gray-300');
+                } else {
+                    btn.classList.remove('bg-cafe-accent', 'text-white');
+                    btn.classList.add('bg-cafe-card', 'text-gray-300');
+                }
+            });
+            renderMenu();
+        }
+
+        function filterSearch(query) { searchQuery = query; renderMenu(); }
+        function toggleAdminModal(show) { if(show) document.getElementById('admin-modal').classList.remove('hidden'); else document.getElementById('admin-modal').classList.add('hidden'); }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('admin-user').value;
+            const p = document.getElementById('admin-pass').value;
+            if(u === siteData.adminUser && p === siteData.adminPass) {
+                toggleAdminModal(false);
+                openDashboard();
+            } else { alert('یوزەرنەیم یان پاسۆرد هەڵەیە!'); }
+        }
+
+        function openDashboard() {
+            document.getElementById('admin-dashboard').classList.remove('hidden');
+            renderAdminItemsList();
+        }
+
+        function closeDashboard() { document.getElementById('admin-dashboard').classList.add('hidden'); fetchItemsFromCloud(); }
+
+        document.getElementById('new-img-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) { tempItemBase64 = event.target.result; }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function addNewItemCloud() {
+            const nameCkb = document.getElementById('new-name-ckb').value;
+            const nameAr = document.getElementById('new-name-ar').value;
+            const nameEn = document.getElementById('new-name-en').value;
+            const category = document.getElementById('new-category').value;
+            const price = document.getElementById('new-price').value;
+            if(!nameCkb || !price) { alert('تکایە لانیکەم ناو بە کوردی و نرخ بنووسە!'); return; }
+
+            const newItem = {
+                id: Date.now(),
+                category: category,
+                name: { ckb: nameCkb, ar: nameAr || nameCkb, en: nameEn || nameCkb },
+                price: price,
+                img: tempItemBase64 || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&h=300&fit=crop'
+            };
+
+            const { error } = await _supabase.from('menu_items').insert([newItem]);
+            if(error) { alert('هەڵە ڕوویدا لە کاتی ناردن بۆ داتابەیس!'); console.error(error); return; }
+
+            tempItemBase64 = '';
+            document.getElementById('new-name-ckb').value = '';
+            document.getElementById('new-name-ar').value = '';
+            document.getElementById('new-name-en').value = '';
+            document.getElementById('new-price').value = '';
+            await fetchItemsFromCloud();
+            renderAdminItemsList();
+            alert('ئایتمەکە زیادکرا و لە داتابەیس پاشەکەوت بوو!');
+        }
+
+        async function renderAdminItemsList() {
+            const listContainer = document.getElementById('admin-items-list');
+            listContainer.innerHTML = 'بارکردن...';
+            const { data } = await _supabase.from('menu_items').select('*');
+            listContainer.innerHTML = '';
+            if(!data) return;
+            data.forEach(item => {
+                let nameObj = typeof item.name === 'string' ? JSON.parse(item.name) : item.name;
+                listContainer.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-800 p-2.5 rounded-lg border border-gray-700 mb-2">
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <img src="${item.img}" class="w-10 h-10 rounded object-cover">
+                            <span class="text-xs">${nameObj.ckb} (${item.price})</span>
+                        </div>
+                        <button onclick="deleteItemCloud(${item.id})" class="text-red-400 text-xs px-2.5 py-1 bg-red-900/40 rounded"><i class="fa-solid fa-trash ml-1"></i> سڕینەوە</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function deleteItemCloud(id) {
+            await _supabase.from('menu_items').delete().eq('id', id);
+            await fetchItemsFromCloud();
+            renderAdminItemsList();
+        }
+
+        document.documentElement.style.setProperty('--text-color', savedTheme.text);
+        fetchItemsFromCloud();
+    </script>
+</body>
+</html>
