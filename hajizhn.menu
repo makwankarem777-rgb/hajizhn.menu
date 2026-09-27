@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاجی ژن | مێنوی کافێ</title>
+    <!-- لێرەدا کتابخانەی سوبابەیس بانگ دەکرێت -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 20px; }
+        h1 { color: #f39c12; }
+        .menu-container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 10px; }
+        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div class="menu-container">
+        <h1>☕ کافەی حاجی ژن</h1>
+        <p>مێنوی خواردنەوەکان و کافە</p>
+        <div id="menu-list">
+            <p>خەریکە مێنوەکە بار دەبێت...</p>
+        </div>
+    </div>
+
+    <script>
+        // زانیارییە تایبەتەکانی سوبابەیس کە دابووت
+        const SUPABASE_URL = 'https://inxbszbhdlmvggbxtaj.supabase.co';
+        const SUPABASE_ANON_KEY = 'hajizhn1234567890';
+
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function loadMenu() {
+            const listDiv = document.getElementById('menu-list');
+            try {
+                // تێبینی: تکایە دڵنیابە لەوەی ناوی خشتەکەت لە سوبابەیس 'menu' یان نزیکی ئەوەیە
+                const { data, error } = await _supabase.from('menu').select('*');
+                
+                if (error) {
+                    listDiv.innerHTML = '<p>هەڵە لە هێنانی زانیارییەکان ڕووی دا.</p>';
+                    console.error(error);
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    listDiv.innerHTML = '<p>هیچ کاڵایەک لە مێنەکەدا نییە.</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = '';
+                data.forEach(item => {
+                    listDiv.innerHTML += `
+                        <div class="item">
+                            <span>${item.name}</span>
+                            <span><b>${item.price} دینار</b></span>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                listDiv.innerHTML = '<p>پەیوەندی بە دادابەیسەوە سەرکەوتوو نەبوو.</p>';
+            }
+        }
+
+        loadMenu();
+    </script>
+</body>
+</html>
